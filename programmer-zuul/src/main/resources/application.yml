@@ -1,0 +1,48 @@
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+server:
+  port: 8769
+
+spring:
+  profiles:
+    active: dev
+  application:
+    name: service-zuul
+  cloud:
+    gateway:
+      routes:
+        - id: path_route
+          uri: lb://programmer-util  # 后端服务名
+          predicates:
+            - Path=/util/**   # 路由地址
+          filters:
+            - name: AuthenticationFilter  # 身份认证
+            - name: AuthorizationFilter   # 用户鉴权
+            - StripPrefix=1 # 去掉前缀
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # 允许携带认证信息
+            # 允许跨域的源(网站域名/ip)，设置*为全部
+            # 允许跨域请求里的head字段，设置*为全部
+            # 允许跨域的method， 默认为GET和OPTIONS，设置*为全部
+            # 跨域允许的有效期
+            allow-credentials: true
+            allowed-origins:
+              - "http://localhost:8001"
+              - "http://localhost:8000"
+            allowed-headers: "*"
+            allowed-methods: "*"
+            max-age: 3600
+            # 允许response的head信息
+            # 默认仅允许如下6个：
+            #     Cache-Control
+            #     Content-Language
+            #     Content-Type
+            #     Expires
+            #     Last-Modified
+            #     Pragma
+            #exposed-headers:

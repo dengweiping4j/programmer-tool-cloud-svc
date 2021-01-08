@@ -1,0 +1,11 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: programmer-blog
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://192.168.59.26:8761/eureka/
