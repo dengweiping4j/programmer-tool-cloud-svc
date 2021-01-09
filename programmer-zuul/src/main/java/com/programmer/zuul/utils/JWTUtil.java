@@ -16,12 +16,14 @@ import java.util.Map;
  * @author dengweiping
  * @date 2021/1/8 16:18
  */
-public class JWTUtils {
+public class JWTUtil {
 
-    // token 签名的秘钥，可设置到配置文件中
-    private static final String SECRET_KEY = "secretKey:5xcJVrXNyQDIxK1l2RS9nw";
+    // token 签名秘钥
+    private static final String SECRET_KEY = "secretKey:1deNgweIPiNg994IsCoOL2223";
     // token过期时间
-    public static final long TOKEN_EXPIRE_TIME = 7200 * 1000;
+    private static final long TOKEN_EXPIRE_TIME = 30 * 60 * 1000;
+
+    public static final String LOGIN_URL = "/auth/login";
 
     /**
      * 生成jwt
@@ -34,7 +36,7 @@ public class JWTUtils {
         header.put("alg", "HS256");
         // 生成 token：头部+载荷+签名
         return JWT.create().withHeader(header)
-                .withClaim("userId", userId)
+                .withClaim("user", userId)
                 .withExpiresAt(new Date(System.currentTimeMillis() + TOKEN_EXPIRE_TIME)).sign(algorithm);
     }
 
