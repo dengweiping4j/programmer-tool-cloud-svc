@@ -16,7 +16,7 @@ spring:
         - id: programmer-util
           uri: lb://programmer-util
           predicates:
-            - Path=/api/generate/**
+            - Path=/api/generator/**
           filters:
             - name: AuthFilter  # 身份认证
 
