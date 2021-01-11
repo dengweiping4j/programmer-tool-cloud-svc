@@ -16,9 +16,10 @@ spring:
         - id: programmer-util
           uri: lb://programmer-util
           predicates:
-            - Path=/api/generator/**
+            - Path=/generator/**
           filters:
             - name: AuthFilter  # 身份认证
+            - StripPrefix=1  #前缀，在当前路径匹配中表示去掉第一个前缀
 
       #以下为 跨域配置
       default-filters:

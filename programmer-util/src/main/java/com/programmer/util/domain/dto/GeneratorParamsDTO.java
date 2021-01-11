@@ -13,7 +13,7 @@ import java.util.List;
 @Data
 public class GeneratorParamsDTO {
 
-    //表
+    //表名列表
     private List<String> tables;
 
     //模块名
