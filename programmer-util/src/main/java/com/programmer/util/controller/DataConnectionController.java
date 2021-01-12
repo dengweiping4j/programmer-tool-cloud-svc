@@ -172,4 +172,20 @@ public class DataConnectionController {
         LOGGER.debug("dataConnection id: {}", dataConnectionId);
         return ResponseEntity.ok(dataConnectionService.getSchemas(dataConnectionId));
     }
+
+    /**
+     * 根据数据源Id查询表列表
+     *
+     * @param dataConnectionId 数据连接ID
+     * @return
+     */
+    @ApiOperation(value = "根据数据源Id查询表列表", notes = "根据数据源Id查询表列表", produces = "application/json")
+    @ApiImplicitParam(name = "dataConnectionId", value = "数据源Id", paramType = "path")
+    @ApiResponses({@ApiResponse(code = 200, message = "查询成功!"),
+            @ApiResponse(code = 204, message = "没有内容!")})
+    @RequestMapping(value = "/findTables/{dataConnectionId}", method = RequestMethod.GET)
+    public ResponseEntity<Object> findTables(@PathVariable("dataConnectionId") String dataConnectionId) {
+        LOGGER.debug("dataConnection id: {}", dataConnectionId);
+        return ResponseEntity.ok(dataConnectionService.findTableAndViews(dataConnectionId));
+    }
 }

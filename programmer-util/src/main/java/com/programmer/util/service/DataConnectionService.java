@@ -1,6 +1,7 @@
 package com.programmer.util.service;
 
 import com.programmer.util.domain.DataConnection;
+import com.programmer.util.domain.DatabaseColumn;
 import com.programmer.util.domain.DriverPath;
 import com.programmer.util.domain.Result;
 import com.programmer.util.domain.dto.DataConnectionDTO;
@@ -260,7 +261,6 @@ public class DataConnectionService {
         return driver;
     }
 
-
     /**
      * 关闭数据库连接
      *
@@ -352,6 +352,192 @@ public class DataConnectionService {
     }
 
     /**
+     * 执行自定义SQL语句
+     *
+     * @param sql
+     * @param dataConnection
+     * @param params
+     * @param <T>
+     * @return
+     */
+    public <T> Result executeBySql(String sql, DataConnection dataConnection, List<T> params) {
+        if (dataConnection == null) {
+            return Result.error("未找到指定的数据连接！");
+        }
+        Result getConnectionResult = getConnection(dataConnection);
+        Connection conn = null;
+        if (getConnectionResult.succeed()) {
+            conn = (Connection) getConnectionResult.getData();
+        }
+        if (conn == null) {
+            return Result.error("数据库连接失败！");
+        }
+        PreparedStatement preparedStatement = null;
+        int result;
+        try {
+            preparedStatement = conn.prepareStatement(sql);
+            if (params != null && !params.isEmpty()) {
+                for (int i = 0; i < params.size(); i++) {
+                    preparedStatement.setObject(i + 1, params.get(i));
+                }
+            }
+            preparedStatement.executeUpdate();
+            return Result.success("执行成功");
+        } catch (Exception e) {
+            LOGGER.error("execute query sql exception: ", e);
+            LOGGER.error("error sql : ", sql);
+            e.printStackTrace();
+            return Result.error("执行SQL语句时出错 ", e.getMessage());
+        } finally {
+            disConnect(conn, preparedStatement, null);
+        }
+    }
+
+    /**
+     * 获取数据库类型
+     *
+     * @param dataConnectionId
+     * @return
+     */
+    public String getDataConnectionTypeById(String dataConnectionId) {
+        DataConnection dataConnection = getDataConnectionById(dataConnectionId);
+        if (dataConnection != null) {
+            return DataConnectionMapper.toVO(dataConnection).getType();
+        }
+        return null;
+    }
+
+    /**
+     * 查询数据库表空间
+     *
+     * @param dataConnectionId
+     * @return
+     */
+    public List<String> getSchemas(String dataConnectionId) {
+        String sql = "SELECT username FROM all_users ORDER BY username";
+        DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).get();
+        Result executeQueryResult = executeQueryBySQL(sql, dataConnection, null);
+        if (executeQueryResult.errored()) {
+            return null;
+        }
+        List<Map<String, Object>> data = (List<Map<String, Object>>) executeQueryResult.getData();
+        List<String> result = new ArrayList<>();
+        for (Map<String, Object> map : data) {
+            result.add(map.get("USERNAME").toString());
+        }
+        if (data != null && data.size() > 0) {
+
+        }
+        return result;
+    }
+
+    public Result findTableAndViews(String dataConnectionId) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        //获取表
+        Result tableResult = getTableListByDataConnectionId(dataConnectionId);
+        if (tableResult.errored()) {
+            return tableResult;
+        }
+        resultList.addAll((List<Map<String, Object>>) tableResult.getData());
+
+        //获取视图
+        Result viewResult = getViewListByDataConnectionId(dataConnectionId);
+        if (viewResult.errored()) {
+            return viewResult;
+        }
+        resultList.addAll((List<Map<String, Object>>) viewResult.getData());
+        return Result.success(resultList);
+    }
+
+    /**
+     * 根据数据源id查询数据库表列表
+     *
+     * @param dataConnectionId
+     * @return
+     */
+    public Result getTableListByDataConnectionId(String dataConnectionId) {
+        DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).orElse(null);
+        if (dataConnection == null) {
+            return Result.error("未找到指定的数据连接！");
+        }
+        DataConnectionDTO dataConnectionDTO = DataConnectionMapper.toDTO(dataConnection);
+        StringBuffer sql = new StringBuffer();
+        List<String> params = new ArrayList<>();
+        switch (dataConnectionDTO.getType()) {
+            case DataConnection.MYSQL:
+                sql.append("select distinct table_name tableName,table_comment tableComment from information_schema.tables where Table_type = 'BASE TABLE' and table_schema=? order by table_name");
+                params.add(dataConnectionDTO.getDatabase());
+                break;
+            case DataConnection.POSTGRESQL:
+            case DataConnection.T_BASE:
+                sql.append("select distinct relname as \"tableName\", cast(obj_description(relfilenode, 'pg_class') as varchar) as \"tableComment\""
+                        + " from pg_class c left join pg_namespace p on c.relnamespace = p.oid"
+                        + " inner join information_schema.table_privileges i on i.table_name=c.relname"
+                        + " where p.nspname = ? and i.table_schema=? and relkind = 'r' and relname not like 'pg_%' and relname not like 'sql_%' order by relname");
+                params.add(dataConnectionDTO.getSchema());
+                params.add(dataConnectionDTO.getSchema());
+                break;
+            case DataConnection.ORACLE:
+                sql.append("select a.table_name \"tableName\",b.COMMENTS \"tableComment\" from USER_TABLES a,USER_TAB_COMMENTS b WHERE a.TABLE_NAME=b.TABLE_NAME order by table_name");
+                break;
+            case DataConnection.SQL_SERVER:
+                sql.append("select a.name AS \"tableName\",convert(varchar(100), isnull(g.[value], '')) AS \"tableComment\""
+                        + " from sys.tables a left join sys.extended_properties g on (a.object_id = g.major_id AND g.minor_id = 0) order by a.name");
+                break;
+        }
+        Result result = executeQueryBySQL(sql.toString(), dataConnection, params);
+        if (result.succeed()) {
+            List<Map<String, Object>> tableList = (List<Map<String, Object>>) result.getData();
+            return Result.success(tableList);
+        }
+        return result;
+    }
+
+    /**
+     * 根据数据源id查询数据库视图列表
+     *
+     * @param dataConnectionId
+     * @return
+     */
+    public Result getViewListByDataConnectionId(String dataConnectionId) {
+        DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).orElse(null);
+        if (dataConnection == null) {
+            return Result.error("未找到指定的数据连接！");
+        }
+        DataConnectionDTO dataConnectionDTO = DataConnectionMapper.toDTO(dataConnection);
+        StringBuffer sql = new StringBuffer();
+        List<String> params = new ArrayList<>();
+        switch (dataConnectionDTO.getType()) {
+            case DataConnection.MYSQL:
+                sql.append("SELECT distinct TABLE_NAME as view_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND  TABLE_TYPE ='VIEW'");
+                params.add(dataConnectionDTO.getDatabase());
+                break;
+            case DataConnection.POSTGRESQL:
+            case DataConnection.T_BASE:
+                sql.append("select distinct view_name from (select distinct v.viewname as view_name"
+                        + " from pg_views v"
+                        + " inner join information_schema.table_privileges i on v.schemaname = i.table_schema"
+                        + " WHERE schemaname = ?) t"
+                        + " order by view_name");
+                params.add(dataConnectionDTO.getSchema());
+                break;
+            case DataConnection.ORACLE:
+                sql.append("select distinct view_name from USER_VIEWS order by view_name");
+                params.add(dataConnectionDTO.getUsername().toUpperCase());
+                break;
+            case DataConnection.SQL_SERVER:
+                sql.append("select [name] as view_name from sysobjects where xtype='V'");
+                break;
+        }
+        Result result = executeQueryBySQL(sql.toString(), dataConnection, params);
+        if (result.succeed()) {
+            List<Map<String, Object>> viewList = (List<Map<String, Object>>) result.getData();
+            return Result.success(viewList);
+        }
+        return result;
+    }
+
+    /**
      * 执行指定查询语句
      *
      * @param sql            sql语句
@@ -359,7 +545,7 @@ public class DataConnectionService {
      * @param params         查询参数
      * @return
      */
-    public <T> Result executeQueryBySql(String sql, DataConnection dataConnection, List<T> params) {
+    public <T> Result executeQueryBySQL(String sql, DataConnection dataConnection, List<T> params) {
         if (dataConnection == null) {
             return Result.error("未找到指定的数据连接！");
         }
@@ -489,203 +675,129 @@ public class DataConnectionService {
         }
     }
 
-    /**
-     * 执行自定义SQL语句
-     *
-     * @param sql
-     * @param dataConnection
-     * @param params
-     * @param <T>
-     * @return
-     */
-    public <T> Result executeBySql(String sql, DataConnection dataConnection, List<T> params) {
-        if (dataConnection == null) {
-            return Result.error("未找到指定的数据连接！");
-        }
-        Result getConnectionResult = getConnection(dataConnection);
-        Connection conn = null;
-        if (getConnectionResult.succeed()) {
-            conn = (Connection) getConnectionResult.getData();
-        }
-        if (conn == null) {
-            return Result.error("数据库连接失败！");
-        }
-        PreparedStatement preparedStatement = null;
-        int result;
-        try {
-            preparedStatement = conn.prepareStatement(sql);
-            if (params != null && !params.isEmpty()) {
-                for (int i = 0; i < params.size(); i++) {
-                    preparedStatement.setObject(i + 1, params.get(i));
-                }
-            }
-            preparedStatement.executeUpdate();
-            return Result.success("执行成功");
-        } catch (Exception e) {
-            LOGGER.error("execute query sql exception: ", e);
-            LOGGER.error("error sql : ", sql);
-            e.printStackTrace();
-            return Result.error("执行SQL语句时出错 ", e.getMessage());
-        } finally {
-            disConnect(conn, preparedStatement, null);
-        }
-    }
 
     /**
-     * 获取数据库表和视图列表
+     * 获取指定表的字段信息
      *
      * @param dataConnectionId
+     * @param tableName
      * @return
      */
-    public Result getTableAndViewList(String dataConnectionId, String schema) {
-        List<Map<String, Object>> resultList = new ArrayList<>();
-        //获取表
-        Result tableResult = getTableListByDataConnectionId(dataConnectionId, schema);
-        if (tableResult.errored()) {
-            return tableResult;
+    public Result getTableColumns(String dataConnectionId, String tableName) {
+        if (dataConnectionId == null || tableName == null) {
+            return Result.error("未指定数据源或表！");
         }
-        resultList.addAll((List<Map<String, Object>>) tableResult.getData());
-        //获取视图
-        Result viewResult = getViewListByDataConnectionId(dataConnectionId, schema);
-        if (viewResult.errored()) {
-            return viewResult;
-        }
-        resultList.addAll((List<Map<String, Object>>) viewResult.getData());
-        return Result.success(resultList);
-    }
 
-    /**
-     * 根据数据源id查询数据库表列表
-     *
-     * @param dataConnectionId
-     * @return
-     */
-    public Result getTableListByDataConnectionId(String dataConnectionId, String schema) {
-        DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).orElse(null);
-        if (dataConnection == null) {
-            return Result.error("未找到指定的数据连接！");
-        }
-        DataConnectionDTO dataConnectionDTO = DataConnectionMapper.toDTO(dataConnection);
-        StringBuffer sql = new StringBuffer();
-        List<String> params = new ArrayList<>();
-        switch (dataConnectionDTO.getType()) {
-            case DataConnection.MYSQL:
-                sql.append("select distinct table_name,table_comment from information_schema.tables where Table_type = 'BASE TABLE' and table_schema=? order by table_name");
-                params.add(dataConnectionDTO.getDatabase());
-                break;
-            case DataConnection.POSTGRESQL:
-            case DataConnection.T_BASE:
-                sql.append("select distinct relname as table_name, cast(obj_description(relfilenode, 'pg_class') as varchar) as table_comment"
-                        + " from pg_class c left join pg_namespace p on c.relnamespace = p.oid"
-                        + " inner join information_schema.table_privileges i on i.table_name=c.relname"
-                        + " where p.nspname = ? and i.table_schema=? and relkind = 'r' and relname not like 'pg_%' and relname not like 'sql_%' order by relname");
-                params.add(dataConnectionDTO.getSchema());
-                params.add(dataConnectionDTO.getSchema());
-                break;
-            case DataConnection.ORACLE:
-                sql.append("select a.table_name,b.COMMENTS table_comment from ALL_TABLES a,ALL_TAB_COMMENTS b WHERE a.TABLE_NAME=b.TABLE_NAME and a.OWNER= ? order by a.OWNER,table_name");
-                if (StringUtils.isNotBlank(schema)) {
-                    params.add(schema);
-                } else {
-                    params.add(dataConnectionDTO.getUsername().toUpperCase());
-                }
-                break;
-            case DataConnection.SQL_SERVER:
-                sql.append("select a.name AS table_name,convert(varchar(100), isnull(g.[value], '')) AS table_comment"
-                        + " from sys.tables a left join sys.extended_properties g on (a.object_id = g.major_id AND g.minor_id = 0) order by a.name");
-                break;
-        }
-        Result result = executeQueryBySql(sql.toString(), dataConnection, params);
-        if (result.succeed()) {
-            List<Map<String, Object>> tableList = (List<Map<String, Object>>) result.getData();
-            return Result.success(tableList);
-        }
-        return result;
-    }
-
-    /**
-     * 根据数据源id查询数据库视图列表
-     *
-     * @param dataConnectionId
-     * @return
-     */
-    public Result getViewListByDataConnectionId(String dataConnectionId, String schema) {
-        DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).orElse(null);
-        if (dataConnection == null) {
-            return Result.error("未找到指定的数据连接！");
-        }
-        DataConnectionDTO dataConnectionDTO = DataConnectionMapper.toDTO(dataConnection);
-        StringBuffer sql = new StringBuffer();
-        List<String> params = new ArrayList<>();
-        switch (dataConnectionDTO.getType()) {
-            case DataConnection.MYSQL:
-                sql.append("SELECT distinct TABLE_NAME as view_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND  TABLE_TYPE ='VIEW'");
-                params.add(dataConnectionDTO.getDatabase());
-                break;
-            case DataConnection.POSTGRESQL:
-            case DataConnection.T_BASE:
-                sql.append("select distinct view_name from (select distinct v.viewname as view_name"
-                        + " from pg_views v"
-                        + " inner join information_schema.table_privileges i on v.schemaname = i.table_schema"
-                        + " WHERE schemaname = ?) t"
-                        + " order by view_name");
-                params.add(dataConnectionDTO.getSchema());
-                break;
-            case DataConnection.ORACLE:
-                sql.append("select distinct view_name from ALL_VIEWS where OWNER= ? order by view_name");
-                if (StringUtils.isNotBlank(schema)) {
-                    params.add(schema);
-                } else {
-                    params.add(dataConnectionDTO.getUsername().toUpperCase());
-                }
-                break;
-            case DataConnection.SQL_SERVER:
-                sql.append("select [name] as view_name from sysobjects where xtype='V'");
-                break;
-        }
-        Result result = executeQueryBySql(sql.toString(), dataConnection, params);
-        if (result.succeed()) {
-            List<Map<String, Object>> viewList = (List<Map<String, Object>>) result.getData();
-            return Result.success(viewList);
-        }
-        return result;
-    }
-
-    /**
-     * 获取数据库类型
-     *
-     * @param dataConnectionId
-     * @return
-     */
-    public String getDataConnectionTypeById(String dataConnectionId) {
-        DataConnection dataConnection = getDataConnectionById(dataConnectionId);
-        if (dataConnection != null) {
-            return DataConnectionMapper.toVO(dataConnection).getType();
-        }
-        return null;
-    }
-
-    /**
-     * 查询数据库表空间
-     *
-     * @param dataConnectionId
-     * @return
-     */
-    public List<String> getSchemas(String dataConnectionId) {
-        String sql = "SELECT username FROM all_users ORDER BY username";
         DataConnection dataConnection = dataConnectionRepository.findById(dataConnectionId).get();
-        Result executeQueryResult = executeQueryBySql(sql, dataConnection, null);
-        if (executeQueryResult.errored()) {
-            return null;
-        }
-        List<Map<String, Object>> data = (List<Map<String, Object>>) executeQueryResult.getData();
-        List<String> result = new ArrayList<>();
-        for (Map<String, Object> map : data) {
-            result.add(map.get("USERNAME").toString());
-        }
-        if (data != null && data.size() > 0) {
 
+        //防止sql注入
+        if (!tableName.matches("[a-zA-Z0-9_.]*")) {
+            //表名不合法
+            return Result.error("表名不合法");
+        }
+        DataConnectionDTO dataConnectionDTO = DataConnectionMapper.toDTO(dataConnection);
+        StringBuffer sql = new StringBuffer();
+        List<String> params = new ArrayList<>();
+
+        switch (dataConnectionDTO.getType()) {
+            case DataConnection.MYSQL:
+                sql.append(
+                        "select COLUMN_NAME,DATA_TYPE,COLUMN_TYPE,NUMERIC_SCALE,COLUMN_KEY,COLUMN_COMMENT,IS_NULLABLE"
+                                + " from information_schema.columns"
+                                + " where table_name = '" + tableName + "' and table_schema = '" + dataConnectionDTO.getDatabase() + "'"
+                );
+                break;
+            case DataConnection.POSTGRESQL:
+            case DataConnection.T_BASE:
+                sql.append(
+                        "select a.attnum,"
+                                + " a.attname \"columnName\",t.typname \"columnType\",coalesce(d.character_maximum_length, d.numeric_precision) \"columnLength\","
+                                + " d.numeric_scale \"numericScaleLength\",(a.attnotnull is false) \"isNullable\",d.column_default \"defaultValue\","
+                                + " col_description(a.attrelid, a.attnum) as \"columnComment\",case when length(b.attname) > 0 then 'PRI' end as \"columnKey\""
+                                + " from pg_class c left join pg_namespace p on c.relnamespace = p.oid,pg_attribute a,pg_type t,information_schema.columns d"
+                                + " left join (select pg_attribute.attname from pg_index,pg_class,pg_attribute"
+                                + "  where pg_class.oid = '" + tableName + "' :: regclass and pg_index.indrelid = pg_class.oid and pg_attribute.attrelid = pg_class.oid"
+                                + " and pg_attribute.attnum = any (pg_index.indkey) ) b on d.column_name = b.attname"
+                                + " where a.attrelid = c.oid and a.atttypid = t.oid and a.attnum > 0 and c.relname = d.table_name and d.column_name = a.attname and c.relname = '" + tableName + "'"
+                                + " and d.table_schema = ? and p.nspname = ?"
+                );
+                params.add(dataConnectionDTO.getSchema());
+                params.add(dataConnectionDTO.getSchema());
+                break;
+            case DataConnection.ORACLE:
+                sql.append(
+                        "select u1.COLUMN_NAME as \"columnName\",u1.DATA_TYPE as \"columnType\",u1.DATA_LENGTH as \"columnLength\",u1.NULLABLE as \"isNullable\","
+                                + " u1.DATA_SCALE as \"dataScale\",u2.comments as \"columnComment\","
+                                + " (case when u1.COLUMN_NAME in "
+                                + " (select cu.COLUMN_NAME from all_cons_columns cu,all_constraints au where cu.constraint_name = au.constraint_name and au.constraint_type = 'P' and au.table_name = ?"
+                                + " )then 'PRI' end) as \"columnKey\""
+                                + " from all_tab_columns u1,all_col_comments u2"
+                                + " where u1.OWNER=? and u2.OWNER=? and u1.TABLE_NAME = u2.table_name and u1.COLUMN_NAME = u2.column_name and u1.TABLE_NAME = ?"
+                );
+                if (tableName.indexOf(".") != -1) {
+                    String schema = tableName.substring(0, tableName.indexOf("."));
+                    String afterTableName = tableName.substring(tableName.indexOf(".") + 1);
+                    params.add(afterTableName);
+                    params.add(schema);
+                    params.add(schema);
+                    params.add(afterTableName);
+                } else {
+                    params.add(tableName);
+                    params.add(tableName);
+                }
+                break;
+            case DataConnection.SQL_SERVER:
+                sql.append(
+                        "SELECT "
+                                + " columnName     = a.name,"
+                                + " columnKey       = case when exists(SELECT 1 FROM sysobjects where xtype='PK' and parent_obj=a.id and name in ("
+                                + " SELECT name FROM sysindexes WHERE indid in( SELECT indid FROM sysindexkeys WHERE id = a.id AND colid=a.colid))) then 'PRI' else '' end,"
+                                + " columnType       = b.name,"
+                                + " columnLength       = COLUMNPROPERTY(a.id,a.name,'PRECISION'),"
+                                + " decimalLength   =CONVERT(nvarchar(50),isnull(COLUMNPROPERTY(a.id, a.name, 'Scale'), 0)),"
+                                + " isNullable     = case when a.isnullable=1 then 'true' else 'false' end,"
+                                + " columnComment   = CONVERT(nvarchar(50),isnull(g.[value], ''), 0)"
+                                + " FROM syscolumns a left join systypes b on a.xusertype=b.xusertype inner join sysobjects d on a.id=d.id  and d.xtype='U' and  d.name<>'dtproperties'"
+                                + " left join syscomments e on a.cdefault=e.id left join sys.extended_properties g on a.id=G.major_id and a.colid=g.minor_id"
+                                + " left join sys.extended_properties f on d.id=f.major_id and f.minor_id=0"
+                                + "  where d.name='" + tableName + "' order by a.id,a.colorder"
+                );
+                break;
+        }
+        Result result = executeQueryBySQL(sql.toString(), dataConnection, params);
+        List<Map<String, Object>> resultList = (List<Map<String, Object>>) result.getData();
+        if (result.succeed()) {
+            List<DatabaseColumn> resultColumn = columnMapToEntity(resultList, dataConnectionDTO.getType());
+            return Result.success(resultColumn);
         }
         return result;
+    }
+
+    /**
+     * 字段信息映射到Column实体
+     *
+     * @param list
+     * @param databaseType
+     * @return
+     */
+    private List<DatabaseColumn> columnMapToEntity(List<Map<String, Object>> list, String databaseType) {
+        List<DatabaseColumn> resultList = new ArrayList<>();
+        for (Map<String, Object> map : list) {
+            DatabaseColumn column = new DatabaseColumn();
+            if (databaseType.equals(DataConnection.MYSQL)) {
+                column.setColumnName(map.get("COLUMN_NAME") == null ? null : map.get("COLUMN_NAME").toString());
+                column.setColumnType(map.get("DATA_TYPE") == null ? null : map.get("DATA_TYPE").toString());
+                String columnTypeLength = map.get("COLUMN_TYPE").toString();
+                column.setColumnComment(map.get("COLUMN_COMMENT") == null ? null : map.get("COLUMN_COMMENT").toString());
+                column.setPrimary("PRI".equals(map.get("COLUMN_KEY")));
+            } else {
+                column.setColumnName(map.get("columnName") == null ? null : map.get("columnName").toString());
+                column.setColumnType(map.get("columnType") == null ? null : map.get("columnType").toString());
+                column.setColumnComment(map.get("columnComment") == null ? null : map.get("columnComment").toString());
+                column.setPrimary("PRI".equals(map.get("columnKey")));
+            }
+            resultList.add(column);
+        }
+        return resultList;
     }
 }

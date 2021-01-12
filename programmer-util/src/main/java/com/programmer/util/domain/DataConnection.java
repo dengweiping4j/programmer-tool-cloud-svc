@@ -42,25 +42,25 @@ public class DataConnection implements Serializable, Cloneable {
     @Id
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
     @GeneratedValue(generator = "uuid2")
-    @javax.persistence.Column(name = "id")
+    @Column(name = "id")
     private String id;
 
     /**
      * 命名
      */
-    @javax.persistence.Column(name = "name")
+    @Column(name = "name")
     private String name;
 
     /**
      * 类型
      */
-    @javax.persistence.Column(name = "type")
+    @Column(name = "type")
     private String type;
 
     /**
      * 描述
      */
-    @javax.persistence.Column(name = "description")
+    @Column(name = "description")
     private String description;
 
     /**

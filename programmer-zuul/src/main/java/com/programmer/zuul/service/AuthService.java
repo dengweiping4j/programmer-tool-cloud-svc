@@ -38,7 +38,7 @@ public class AuthService {
         redisTemplate.opsForValue().set("token", token);
 
         //保存token到cookie
-        ResponseCookie responseCookie = ResponseCookie.from("token", token).path("/").maxAge(Duration.ofMinutes(1)).build();
+        ResponseCookie responseCookie = ResponseCookie.from("token", token).path("/").maxAge(Duration.ofMinutes(30)).build();
         serverWebExchange.getResponse().addCookie(responseCookie);
 
         return Result.success(token);

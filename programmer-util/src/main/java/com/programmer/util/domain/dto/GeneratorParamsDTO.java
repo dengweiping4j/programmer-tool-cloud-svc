@@ -3,6 +3,7 @@ package com.programmer.util.domain.dto;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生成代码参数实体类
@@ -14,7 +15,9 @@ import java.util.List;
 public class GeneratorParamsDTO {
 
     //表名列表
-    private List<String> tables;
+    private List<Map<String, Object>> tables;
+
+    private String dataConnectionId;
 
     //模块名
     private String moduleName;

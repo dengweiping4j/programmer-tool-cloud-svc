@@ -28,5 +28,5 @@ public class GeneratorParams {
     //作者
     private String author;
 
-    private List<Column> columns;
+    private List<DatabaseColumn> columns;
 }

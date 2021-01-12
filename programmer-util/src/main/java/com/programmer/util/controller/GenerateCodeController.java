@@ -7,10 +7,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -35,8 +32,23 @@ public class GenerateCodeController {
     @ResponseBody
     @ApiOperation(value = "生成代码", notes = "需要表名、包名、作者等信息", produces = "application/json")
     @ApiResponses({@ApiResponse(code = 200, message = "操作成功")})
-    public void code(GeneratorParamsDTO params, HttpServletResponse response) throws IOException {
+    public void code(@RequestBody GeneratorParamsDTO params, HttpServletResponse response) throws IOException {
         byte[] data = generatorService.generatorCode(params);
+
+        response.reset();
+        response.setHeader("Content-Disposition", "attachment; filename=\"generator-code.zip\"");
+        response.addHeader("Content-Length", "" + data.length);
+        response.setContentType("application/octet-stream; charset=UTF-8");
+
+        IOUtils.write(data, response.getOutputStream());
+    }
+
+    /**
+     * 生成代码
+     */
+    @RequestMapping("/code")
+    public void code(String dataConnectionId,String tables, String moduleName, String packageName, String author, HttpServletResponse response) throws IOException {
+        byte[] data = generatorService.generatorCode(dataConnectionId,tables.split(","), moduleName, packageName, author);
 
         response.reset();
         response.setHeader("Content-Disposition", "attachment; filename=\"generator-code.zip\"");

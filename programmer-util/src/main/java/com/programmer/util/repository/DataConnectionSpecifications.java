@@ -28,7 +28,7 @@ public class DataConnectionSpecifications {
                 predicates.add(builder.like(root.get("name").as(String.class), "%" + queryDTO.getName() + "%"));
             }
             if (StringUtils.isNotBlank(queryDTO.getType())) {
-                predicates.add(builder.like(root.get("subtype").as(String.class), "%" + queryDTO.getType() + "%"));
+                predicates.add(builder.like(root.get("type").as(String.class), "%" + queryDTO.getType() + "%"));
             }
             Predicate[] p = new Predicate[predicates.size()];
             query.orderBy(builder.asc(root.get("name")));
