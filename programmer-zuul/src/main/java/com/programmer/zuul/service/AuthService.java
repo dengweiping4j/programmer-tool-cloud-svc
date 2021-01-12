@@ -3,7 +3,7 @@ package com.programmer.zuul.service;
 import com.alibaba.fastjson.JSON;
 import com.programmer.zuul.domain.LoginUser;
 import com.programmer.zuul.domain.Result;
-import com.programmer.zuul.utils.JWTUtil;
+import com.programmer.zuul.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseCookie;
@@ -32,10 +32,10 @@ public class AuthService {
         Map<String, Object> tokenMap = new HashMap<>();
         tokenMap.put("userId", "123456");
         tokenMap.put("userName", loginUser.getUserName());
-        String token = JWTUtil.createJwt(JSON.toJSONString(tokenMap));
+        String token = JwtUtil.createJwt(JSON.toJSONString(tokenMap));
 
-        //保存到redis
-        redisTemplate.opsForValue().set("token", token);
+       /* //保存到redis
+        redisTemplate.opsForValue().set("token", token);*/
 
         //保存token到cookie
         ResponseCookie responseCookie = ResponseCookie.from("token", token).path("/").maxAge(Duration.ofMinutes(30)).build();

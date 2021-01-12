@@ -19,7 +19,6 @@ public class DataConnectionDTO {
     @ApiModelProperty(value = "数据连接名称")
     private String name;
 
-
     @ApiModelProperty(value = "数据库类型")
     private String type;
 
@@ -52,10 +51,6 @@ public class DataConnectionDTO {
 
     @ApiModelProperty(value = "数据库连接串")
     private String url;
-
-    @ApiModelProperty(value = "是否同步表")
-    private boolean syncTable;
-
 
     public String getDriverByType() {
         if (this.type == null) {

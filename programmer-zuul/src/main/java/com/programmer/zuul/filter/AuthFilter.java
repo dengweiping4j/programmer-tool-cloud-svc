@@ -2,21 +2,18 @@ package com.programmer.zuul.filter;
 
 import com.alibaba.fastjson.JSON;
 import com.auth0.jwt.interfaces.Claim;
-import com.programmer.zuul.utils.JWTUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.cloud.gateway.route.Route;
-import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import com.programmer.zuul.utils.JwtUtil;
 
-import java.net.URI;
 import java.util.Map;
 
 /**
@@ -38,7 +35,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory {
             ServerHttpRequest request = exchange.getRequest();
 
             //登录接口，直接放行
-            if (request.getPath().equals(JWTUtil.LOGIN_URL)) {
+            if (request.getPath().equals(JwtUtil.LOGIN_URL)) {
                 return chain.filter(exchange);
             }
 
@@ -46,7 +43,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory {
             if (request.getCookies().containsKey("token")) {
                 String clientToken = request.getCookies().get("token").get(0).getValue();
                 try {
-                    Map<String, Claim> data = JWTUtil.parseToken(clientToken);
+                    Map<String, Claim> data = JwtUtil.parseToken(clientToken);
                     String user = data.get("user").asString();
                     Map<String, Object> userMap = JSON.parseObject(user);
 

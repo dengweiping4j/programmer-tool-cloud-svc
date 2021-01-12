@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
 
-import javax.persistence.Column;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Objects;
@@ -18,9 +17,7 @@ import java.util.Objects;
 @Entity
 @Data
 @Table(name = "data_connection")
-public class DataConnection implements Serializable, Cloneable {
-
-    private static final long serialVersionUID = -1658610148237674132L;
+public class DataConnection implements Serializable {
 
     public static final String PROPERTY_IP = "ip";
     public static final String PROPERTY_PORT = "port";
@@ -38,6 +35,8 @@ public class DataConnection implements Serializable, Cloneable {
     public static final String BIZ = "BIZ";
     public static final String STS = "STS";
     public static final String DWS = "DWS";
+
+    private static final long serialVersionUID = 7532050436218782022L;
 
     @Id
     @GenericGenerator(name = "uuid2", strategy = "uuid2")

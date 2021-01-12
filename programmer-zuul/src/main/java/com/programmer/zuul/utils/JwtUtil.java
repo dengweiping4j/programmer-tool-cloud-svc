@@ -16,7 +16,7 @@ import java.util.Map;
  * @author dengweiping
  * @date 2021/1/8 16:18
  */
-public class JWTUtil {
+public class JwtUtil {
 
     // token 签名秘钥
     private static final String SECRET_KEY = "secretKey:1deNgweIPiNg994IsCoOL2223";

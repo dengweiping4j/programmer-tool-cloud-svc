@@ -322,6 +322,11 @@ public class DataConnectionService {
         return list;
     }
 
+    /**
+     * 条件查询
+     * @param queryDTO
+     * @return
+     */
     public List<DataConnectionVO> queryWhere(DataConnectionDTO queryDTO) {
         List<DataConnection> dataConnectionList = dataConnectionRepository.findAll(DataConnectionSpecifications.queryList(queryDTO));
         List<DataConnectionVO> resultList = new ArrayList<>();
@@ -465,7 +470,7 @@ public class DataConnectionService {
         List<String> params = new ArrayList<>();
         switch (dataConnectionDTO.getType()) {
             case DataConnection.MYSQL:
-                sql.append("select distinct table_name tableName,table_comment tableComment from information_schema.tables where Table_type = 'BASE TABLE' and table_schema=? order by table_name");
+                sql.append("select distinct table_name as tableName,table_comment as tableComment from information_schema.tables where Table_type = 'BASE TABLE' and table_schema=? order by table_name");
                 params.add(dataConnectionDTO.getDatabase());
                 break;
             case DataConnection.POSTGRESQL:
@@ -509,12 +514,12 @@ public class DataConnectionService {
         List<String> params = new ArrayList<>();
         switch (dataConnectionDTO.getType()) {
             case DataConnection.MYSQL:
-                sql.append("SELECT distinct TABLE_NAME as view_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND  TABLE_TYPE ='VIEW'");
+                sql.append("SELECT distinct TABLE_NAME as tableName FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND  TABLE_TYPE ='VIEW'");
                 params.add(dataConnectionDTO.getDatabase());
                 break;
             case DataConnection.POSTGRESQL:
             case DataConnection.T_BASE:
-                sql.append("select distinct view_name from (select distinct v.viewname as view_name"
+                sql.append("select distinct view_name \"tableName\" from (select distinct v.viewname as view_name"
                         + " from pg_views v"
                         + " inner join information_schema.table_privileges i on v.schemaname = i.table_schema"
                         + " WHERE schemaname = ?) t"
@@ -522,11 +527,11 @@ public class DataConnectionService {
                 params.add(dataConnectionDTO.getSchema());
                 break;
             case DataConnection.ORACLE:
-                sql.append("select distinct view_name from USER_VIEWS order by view_name");
+                sql.append("select distinct view_name \"tableName\" from USER_VIEWS order by view_name");
                 params.add(dataConnectionDTO.getUsername().toUpperCase());
                 break;
             case DataConnection.SQL_SERVER:
-                sql.append("select [name] as view_name from sysobjects where xtype='V'");
+                sql.append("select [name] as \"tableName\" from sysobjects where xtype='V'");
                 break;
         }
         Result result = executeQueryBySQL(sql.toString(), dataConnection, params);
