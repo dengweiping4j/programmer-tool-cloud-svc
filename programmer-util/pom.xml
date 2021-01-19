@@ -22,7 +22,7 @@
         <commons.configuration.version>1.10</commons.configuration.version>
         <fastjson.version>1.2.45</fastjson.version>
         <velocity.version>1.7</velocity.version>
-        <mysql.version>5.1.38</mysql.version>
+        <mysql.version>8.0.15</mysql.version>
     </properties>
 
     <dependencies>
@@ -57,11 +57,11 @@
             <version>${velocity.version}</version>
         </dependency>
         <!-- mysql驱动 -->
-        <!--<dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
-        </dependency>-->
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>

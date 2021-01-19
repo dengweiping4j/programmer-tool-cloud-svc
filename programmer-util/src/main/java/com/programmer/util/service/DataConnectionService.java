@@ -166,7 +166,7 @@ public class DataConnectionService {
         if (StringUtils.isBlank(url)) {
             switch (type) {
                 case DataConnection.MYSQL:
-                    url = "jdbc:mysql://" + ip + ":" + port + "/" + database;
+                    url = "jdbc:mysql://" + ip + ":" + port + "/" + database+"?useOldAliasMetadataBehavior=true";
                     break;
                 case DataConnection.POSTGRESQL:
                 case DataConnection.T_BASE:
