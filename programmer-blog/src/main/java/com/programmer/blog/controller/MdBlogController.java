@@ -2,7 +2,6 @@ package com.programmer.blog.controller;
 
 import com.programmer.blog.domain.BlogPaper;
 import com.programmer.blog.domain.Pagination;
-import com.programmer.blog.domain.dto.PaginationSuccessDTO;
 import com.programmer.blog.service.MdBlogService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -10,14 +9,13 @@ import io.swagger.annotations.ApiResponses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.Map;
 
 /**
  * md文档控制器类
@@ -56,11 +54,10 @@ public class MdBlogController {
     @ApiOperation(value = "分页查询", notes = "分页查询", produces = "application/json")
     @ApiResponses({@ApiResponse(code = 200, message = "查询成功")})
     @RequestMapping(value = "/query", method = RequestMethod.POST)
-    public ResponseEntity<PaginationSuccessDTO<BlogPaper>> query(@RequestBody BlogPaper blogPaper,
-                                                                         @Valid Pagination pagination) {
-        Pageable pageable = PageRequest.of(pagination.getPage() - 1, pagination.getPageSize());
-        Page<BlogPaper> data = mdBlogService.query(blogPaper, pageable);
-        return ResponseEntity.ok(new PaginationSuccessDTO<>(data));
+    public ResponseEntity<Object> query(@RequestBody BlogPaper blogPaper,
+                                        @Valid Pagination pagination) {
+        Map<String, Object> result = mdBlogService.query(blogPaper, pagination);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -72,8 +69,9 @@ public class MdBlogController {
     @ApiResponses({@ApiResponse(code = 200, message = "新增成功"),
             @ApiResponse(code = 204, message = "没有内容")})
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<Object> create(@RequestBody BlogPaper blogPaper) {
+    public ResponseEntity<Object> create(@RequestBody BlogPaper blogPaper, HttpServletRequest request) {
         LOGGER.info("create blog data: {}", blogPaper);
+        System.out.println(request.getHeader("userName"));
         return new ResponseEntity<>(mdBlogService.createMdBlog(blogPaper), HttpStatus.OK);
     }
 
