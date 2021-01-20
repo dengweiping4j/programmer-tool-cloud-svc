@@ -52,7 +52,7 @@ public class DocumentService {
             IndexResponse response = restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);
 
             LOGGER.info("result response :{}", response);
-            return Result.success();
+            return Result.success(response);
         } catch (Exception e) {
             return Result.error("创建文档失败", e.getMessage());
         }
@@ -73,7 +73,30 @@ public class DocumentService {
                 return responseBlog;
             }
         } catch (IOException e) {
-            LOGGER.error("query error :{}", e);
+            e.printStackTrace();
+            LOGGER.error("query elasticsearch error :{}", e);
+        }
+
+        return null;
+    }
+
+    /**
+     * 分页查询
+     */
+    public BlogPaper queryDocument() {
+        try {
+            // 获取请求对象
+            GetRequest getRequest = new GetRequest("blog", "md", null);
+            // 获取文档信息
+            GetResponse getResponse = restHighLevelClient.get(getRequest, RequestOptions.DEFAULT);
+            // 将 JSON 转换成对象
+            if (getResponse.isExists()) {
+                BlogPaper responseBlog = JSON.parseObject(getResponse.getSourceAsBytes(), BlogPaper.class);
+                return responseBlog;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            LOGGER.error("query elasticsearch error :{}", e);
         }
 
         return null;

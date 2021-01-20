@@ -13,8 +13,7 @@ public class BlogPaper {
     private String id;
     private String author;
     private String title;
-    private String blogAbstract;
+    private String description;
     private String content;
     private String createDate;
-    private String modifyDate;
 }
