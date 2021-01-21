@@ -1,4 +1,4 @@
-package com.programmer.blog.domain;
+package com.programmer.blog.domain.dto;
 
 import lombok.Data;
 
@@ -11,11 +11,11 @@ import java.util.Date;
  * @date 2021/1/19 14:30
  */
 @Data
-public class BlogPaper {
+public class BlogPaperDTO {
     private String id;
     private String author;
     private String title;
     private String description;
     private String content;
-    private Date createDate;
+    private String createDate;
 }

@@ -5,6 +5,8 @@ import com.alibaba.fastjson.JSON;
 import com.programmer.blog.domain.BlogPaper;
 import com.programmer.blog.domain.Pagination;
 import com.programmer.blog.domain.Result;
+import com.programmer.blog.domain.dto.BlogPaperDTO;
+import com.programmer.blog.domain.mapper.BlogPaperMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.delete.DeleteRequest;
@@ -15,7 +17,6 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.ShardSearchFailure;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -24,7 +25,6 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -83,7 +83,7 @@ public class DocumentService {
     /**
      * 获取文档信息
      */
-    public BlogPaper getDocument(String id) {
+    public BlogPaperDTO getDocument(String id) {
         try {
             // 获取请求对象
             GetRequest getRequest = new GetRequest("blog", "md", id);
@@ -92,7 +92,7 @@ public class DocumentService {
             // 将 JSON 转换成对象
             if (getResponse.isExists()) {
                 BlogPaper responseBlog = JSON.parseObject(getResponse.getSourceAsBytes(), BlogPaper.class);
-                return responseBlog;
+                return BlogPaperMapper.toDTO(responseBlog);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -105,7 +105,7 @@ public class DocumentService {
     /**
      * 分页查询
      */
-    public BlogPaper queryDocument() {
+    public BlogPaperDTO queryDocument() {
         try {
             // 获取请求对象
             GetRequest getRequest = new GetRequest("blog", "md", null);
@@ -114,7 +114,7 @@ public class DocumentService {
             // 将 JSON 转换成对象
             if (getResponse.isExists()) {
                 BlogPaper responseBlog = JSON.parseObject(getResponse.getSourceAsBytes(), BlogPaper.class);
-                return responseBlog;
+                return BlogPaperMapper.toDTO(responseBlog);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -187,18 +187,6 @@ public class DocumentService {
 
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
 
-        RestStatus status = searchResponse.status();
-        TimeValue took = searchResponse.getTook();
-        Boolean terminatedEarly = searchResponse.isTerminatedEarly();
-        boolean timedOut = searchResponse.isTimedOut();
-
-        int totalShards = searchResponse.getTotalShards();
-        int successfulShards = searchResponse.getSuccessfulShards();
-        int failedShards = searchResponse.getFailedShards();
-        for (ShardSearchFailure failure : searchResponse.getShardFailures()) {
-            // failures should be handled here
-        }
-
         SearchHits hits = searchResponse.getHits();
         TotalHits totalHits = hits.getTotalHits();
         // the total number of hits, must be interpreted in the context of totalHits.relation
@@ -213,7 +201,7 @@ public class DocumentService {
         newPagination.put("pageSize", pageSize);
         newPagination.put("total", numHits);
         result.put("pagination", newPagination);
-        List<Map<String, Object>> data = new ArrayList<>();
+        List<BlogPaperDTO> data = new ArrayList<>();
 
         // 查询结果
         SearchHit[] searchHits = hits.getHits();
@@ -223,10 +211,9 @@ public class DocumentService {
             String id = hit.getId();
             float score = hit.getScore();
 
-//            String sourceAsString = hit.getSourceAsString();
-            Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+            BlogPaper responseBlog = JSON.parseObject(hit.getSourceAsString(), BlogPaper.class);
 
-            data.add(sourceAsMap);
+            data.add(BlogPaperMapper.toDTO(responseBlog));
 
 //            String documentTitle = (String) sourceAsMap.get("title");
 //            List<Object> users = (List<Object>) sourceAsMap.get("user");
