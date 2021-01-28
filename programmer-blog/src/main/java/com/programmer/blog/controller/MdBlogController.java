@@ -1,8 +1,10 @@
 package com.programmer.blog.controller;
 
 import com.programmer.blog.domain.BlogPaper;
+import com.programmer.blog.domain.DemoData;
 import com.programmer.blog.domain.Pagination;
 import com.programmer.blog.service.MdBlogService;
+import com.programmer.blog.util.ExcelUtil;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
@@ -15,7 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * md文档控制器类
@@ -56,8 +59,22 @@ public class MdBlogController {
     @RequestMapping(value = "/query", method = RequestMethod.POST)
     public ResponseEntity<Object> query(@RequestBody BlogPaper blogPaper,
                                         @Valid Pagination pagination) {
-        Map<String, Object> result = mdBlogService.query(blogPaper, pagination);
-        return ResponseEntity.ok(result);
+
+        ExcelUtil excelUtil = new ExcelUtil();
+        List<DemoData> data = new ArrayList<>();
+        DemoData demoData = new DemoData();
+        demoData.setDate("2021-01-01");
+        demoData.setName1("120");
+        demoData.setName2("240");
+        data.add(demoData);
+        data.add(demoData);
+        data.add(demoData);
+        excelUtil.simpleWrite(data);
+
+        //Map<String, Object> result = mdBlogService.query(blogPaper, pagination);
+        //return ResponseEntity.ok(result);
+
+        return ResponseEntity.ok(null);
     }
 
     /**
@@ -70,8 +87,6 @@ public class MdBlogController {
             @ApiResponse(code = 204, message = "没有内容")})
     @RequestMapping(method = RequestMethod.POST)
     public ResponseEntity<Object> create(@RequestBody BlogPaper blogPaper, HttpServletRequest request) {
-        LOGGER.info("create blog data: {}", blogPaper);
-        System.out.println(request.getHeader("userName"));
         return new ResponseEntity<>(mdBlogService.createMdBlog(blogPaper), HttpStatus.OK);
     }
 

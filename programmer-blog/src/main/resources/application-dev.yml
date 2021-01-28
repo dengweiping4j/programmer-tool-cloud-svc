@@ -29,7 +29,7 @@ spring:
 
 elasticsearch:
   schema: http
-  address: 192.168.196.131:9200
+  address: 192.168.196.132:9200
   connectTimeout: 5000
   socketTimeout: 5000
   connectionRequestTimeout: 5000

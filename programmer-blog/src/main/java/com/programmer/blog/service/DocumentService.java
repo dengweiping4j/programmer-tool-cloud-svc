@@ -64,7 +64,7 @@ public class DocumentService {
     public Result addDocument(BlogPaper blog) {
         try {
             // 创建索引请求对象
-            IndexRequest indexRequest = new IndexRequest("blog", "md", blog.getId());
+            IndexRequest indexRequest = new IndexRequest("blog","_doc", blog.getId());
             // 将对象转换为 byte 数组
             byte[] json = JSON.toJSONBytes(blog);
             // 设置文档内容
@@ -86,7 +86,7 @@ public class DocumentService {
     public BlogPaperDTO getDocument(String id) {
         try {
             // 获取请求对象
-            GetRequest getRequest = new GetRequest("blog", "md", id);
+            GetRequest getRequest = new GetRequest("blog","_doc", id);
             // 获取文档信息
             GetResponse getResponse = restHighLevelClient.get(getRequest, RequestOptions.DEFAULT);
             // 将 JSON 转换成对象
@@ -98,7 +98,6 @@ public class DocumentService {
             e.printStackTrace();
             LOGGER.error("query elasticsearch error :{}", e);
         }
-
         return null;
     }
 
@@ -108,7 +107,7 @@ public class DocumentService {
     public BlogPaperDTO queryDocument() {
         try {
             // 获取请求对象
-            GetRequest getRequest = new GetRequest("blog", "md", null);
+            GetRequest getRequest = new GetRequest("blog","_doc", null);
             // 获取文档信息
             GetResponse getResponse = restHighLevelClient.get(getRequest, RequestOptions.DEFAULT);
             // 将 JSON 转换成对象
@@ -146,18 +145,15 @@ public class DocumentService {
         sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
 
         // 排序
-        sourceBuilder.sort(new FieldSortBuilder("createDate").order(SortOrder.DESC));
+        //sourceBuilder.sort(new FieldSortBuilder("createDate").order(SortOrder.DESC));
         if (sortBuilders != null) {
             for (SortBuilder sortBuilder : sortBuilders) {
                 sourceBuilder.sort(sortBuilder);
             }
         }
 
-        // 过滤 "_source"
-//        sourceBuilder.fetchSource(false);
-
         //返回字段
-        String[] includeFields = new String[]{"id", "title", "description", "author", "createDate"};
+        String[] includeFields = new String[]{"id", "title", "description", "author"};
         //排除字段
         String[] excludeFields = new String[]{"content"};
         sourceBuilder.fetchSource(includeFields, excludeFields);
@@ -189,9 +185,7 @@ public class DocumentService {
 
         SearchHits hits = searchResponse.getHits();
         TotalHits totalHits = hits.getTotalHits();
-        // the total number of hits, must be interpreted in the context of totalHits.relation
         long numHits = totalHits.value;
-        // whether the number of hits is accurate (EQUAL_TO) or a lower bound of the total (GREATER_THAN_OR_EQUAL_TO)
         TotalHits.Relation relation = totalHits.relation;
         float maxScore = hits.getMaxScore();
 
@@ -245,7 +239,7 @@ public class DocumentService {
     public void updateDocument(BlogPaper blogPaper) {
         try {
             // 创建索引请求对象
-            UpdateRequest updateRequest = new UpdateRequest("blog", "md", blogPaper.getId());
+            UpdateRequest updateRequest = new UpdateRequest("blog", "_doc", blogPaper.getId());
             // 将对象转换为 byte 数组
             byte[] json = JSON.toJSONBytes(blogPaper);
             // 设置更新文档内容
@@ -264,7 +258,7 @@ public class DocumentService {
     public void deleteDocument(String id) {
         try {
             // 创建删除请求对象
-            DeleteRequest deleteRequest = new DeleteRequest("blog", "md", id);
+            DeleteRequest deleteRequest = new DeleteRequest("blog", "_doc", id);
             // 执行删除文档
             DeleteResponse response = restHighLevelClient.delete(deleteRequest, RequestOptions.DEFAULT);
             log.info("删除状态：{}", response.status());

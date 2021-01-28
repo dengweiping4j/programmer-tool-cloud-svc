@@ -57,6 +57,9 @@ public class MdBlogService {
             if (StringUtils.isNotBlank(queryDTO.getTitle())) {
                 queryBuilder = QueryBuilders.multiMatchQuery(queryDTO.getTitle(), "title");
             }
+            if (StringUtils.isNotBlank(queryDTO.getContent())) {
+                queryBuilder = QueryBuilders.multiMatchQuery(queryDTO.getContent(), "content");
+            }
             if (StringUtils.isNotBlank(queryDTO.getDescription())) {
                 queryBuilder = QueryBuilders.multiMatchQuery(queryDTO.getDescription(), "description");
             }
